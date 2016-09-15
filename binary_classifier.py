@@ -82,8 +82,6 @@ def convert_string_to_int_list(pixel_values):
         pixel_vector.append(int(x))
     return pixel_vector    
 
-
-
 #Train the classifier
 for x in xrange(TRAINING_ITERATIONS):
         training_mistakes = 0
@@ -109,7 +107,7 @@ for x in xrange(TRAINING_ITERATIONS):
         training_successes_array.append(training_successes)
 
 	#Test the classifier
-	for test_file_path in training_files:
+	for test_file_path in test_files:
 	    f = open(test_file_path, 'r')
 
 	    for line in f:
