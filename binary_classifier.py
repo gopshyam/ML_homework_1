@@ -2,6 +2,7 @@
 
 import sys
 import math
+import matplotlib.pyplot as plt
 
 training_files = ["Data/ocr_fold0_sm_train.txt", "Data/ocr_fold1_sm_train.txt", "Data/ocr_fold2_sm_train.txt", "Data/ocr_fold3_sm_train.txt", "Data/ocr_fold4_sm_train.txt", "Data/ocr_fold5_sm_train.txt", "Data/ocr_fold6_sm_train.txt", "Data/ocr_fold7_sm_train.txt", "Data/ocr_fold8_sm_train.txt", "Data/ocr_fold9_sm_train.txt"]
 
@@ -129,3 +130,9 @@ print weight_vector
 print "wromg predictions= ", training_mistakes,"; Correct predictions= ",  training_successes
 print training_mistakes_array, training_successes_array
 print testing_mistakes_array, testing_successes_array
+
+plt.plot(training_mistakes_array)
+plt.plot(training_successes_array)
+plt.plot(testing_mistakes_array)
+plt.plot(testing_successes_array)
+plt.show()
