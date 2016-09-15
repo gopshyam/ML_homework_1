@@ -11,7 +11,8 @@ VECTOR_SIZE = 128
 TRAINING_ITERATIONS = 1
 if len(sys.argv) > 1:
     TRAINING_ITERATIONS = int(sys.argv[1])
-LEARNING_RATE = 1
+
+learning_rate = 1
 
 correct_predictions = 0
 wrong_predictions = 0
@@ -34,14 +35,18 @@ def modulus(vector):
     
     return math.sqrt(sum_of_squares) 
     
-def adjust_weight_vector(train_vector, value):
-    for i in xrange(VECTOR_SIZE):
-        weight_vector[i] += LEARNING_RATE * (value * train_vector[i])
-
-def train(train_vector, value):
+def perceptron_train(train_vector, value):
     prediction = dot_product(weight_vector, train_vector)
     if (prediction * value) <= 0:
-        adjust_weight_vector(train_vector, value)
+        for i in xrange(VECTOR_SIZE):
+            weight_vector[i] += learning_rate * (value * train_vector[i])
+
+def passive_aggressive_train(train_vector, value):
+    prediction = dot_product(weight_vector, train_vector)
+    learning_rate = (1 - value * (dot_product(weight_vector, train_vector))) / (modulus(train_vector) ** 2)
+    if (prediction * value) <= 0:
+        for i in xrange(VECTOR_SIZE):
+            weight_vector[i] += learning_rate * (value * train_vector[i])
 
 def test(train_vector, value):
     global correct_predictions, wrong_predictions
@@ -73,7 +78,7 @@ for x in xrange(TRAINING_ITERATIONS):
                     value = -1
                     if line_split[2] in vowels:
                         value = 1
-		    train(pixel_vector, value)
+		    passive_aggressive_train(pixel_vector, value)
 
 	    f.close()
 
