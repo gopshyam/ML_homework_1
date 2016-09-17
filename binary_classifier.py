@@ -34,7 +34,7 @@ weight_vector_array = []
 def dot_product(vector1, vector2):
     result = 0
     for i in xrange(VECTOR_SIZE):
-        result += vector1[1] * vector2[i]
+        result += vector1[i] * vector2[i]
     return result
 
 
