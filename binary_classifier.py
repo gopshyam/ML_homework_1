@@ -9,27 +9,32 @@ training_files = ["Data/ocr_fold0_sm_train.txt", "Data/ocr_fold1_sm_train.txt", 
 test_files = ["Data/ocr_fold0_sm_test.txt", "Data/ocr_fold1_sm_test.txt", "Data/ocr_fold2_sm_test.txt", "Data/ocr_fold3_sm_test.txt", "Data/ocr_fold4_sm_test.txt", "Data/ocr_fold5_sm_test.txt", "Data/ocr_fold6_sm_test.txt", "Data/ocr_fold7_sm_test.txt", "Data/ocr_fold8_sm_test.txt", "Data/ocr_fold9_sm_test.txt"]
 
 VECTOR_SIZE = 128 
+vowels = ['a', 'e', 'i', 'o' ,'u']
 
 TRAINING_ITERATIONS = 1
 if len(sys.argv) > 1:
     TRAINING_ITERATIONS = int(sys.argv[1])
 
-learning_rate = 1
+count = 1
 
-training_successes = 0
-training_successes_array = []
-training_mistakes = 0
-training_mistakes_array = []
+learning_mistakes_per_fold = []
+learning_successes_per_fold = []
+training_mistakes_per_fold = []
+training_successes_per_fold = []
+testing_mistakes_per_fold = []
+testing_successes_per_fold = []
 
-testing_successes = 0
-testing_successes_array = []
-testing_mistakes = 0
-testing_mistakes_array = []
+def parse_file_line(line):
+    if len(line) < 4:
+        return None
+    line_split = line.strip().split('\t')
+    pixel_values = line_split[1]
+    pixel_vector = convert_string_to_int_list(pixel_values)
+    y_hat = -1
+    if line_split[2] in vowels:
+        y_hat = 1
+    return pixel_vector, y_hat
 
-vowels = ['a', 'e', 'i', 'o' ,'u']
-
-weight_vector = [0] * VECTOR_SIZE
-weight_vector_array = []
 
 def dot_product(vector1, vector2):
     result = 0
@@ -45,32 +50,45 @@ def modulus(vector):
     
     return math.sqrt(sum_of_squares) 
     
-def perceptron_train(train_vector, value):
-    global training_mistakes, training_successes
+def perceptron_train(train_vector, y_hat):
+    global learning_mistakes, learning_successes
     prediction = dot_product(weight_vector, train_vector)
-    if (prediction * value) <= 0:
-        training_mistakes += 1
+    if (prediction * y_hat) <= 0:
+        learning_mistakes += 1
         for i in xrange(VECTOR_SIZE):
-            weight_vector[i] += learning_rate * (value * train_vector[i])
+            weight_vector[i] += y_hat * train_vector[i]
     else:
-        training_successes += 1
+        learning_successes += 1
 
-def passive_aggressive_train(train_vector, value):
-    global training_mistakes, training_successes
+def passive_aggressive_train(train_vector, y_hat):
+    global learning_mistakes, learning_successes
     prediction = dot_product(weight_vector, train_vector)
-    learning_rate = (1 - value * (dot_product(weight_vector, train_vector))) / (modulus(train_vector) ** 2)
-    if (prediction * value) <= 0:
-        training_mistakes += 1
+    learning_rate = (1 - y_hat * (dot_product(weight_vector, train_vector))) / (modulus(train_vector) ** 2)
+    if (prediction * y_hat) <= 0:
+        learning_mistakes += 1
         for i in xrange(VECTOR_SIZE):
-            weight_vector[i] += learning_rate * (value * train_vector[i])
+            weight_vector[i] += learning_rate * (y_hat * train_vector[i])
     else:
-        training_successes += 1
+        learning_successes += 1
 
-def test(train_vector, value):
+def averaged_perceptron_train(train_vector, y_hat):
+    global learning_mistakes, learning_successes, count
+    prediction = dot_product(weight_vector, train_vector)
+    if (prediction * y_hat) <= 0:
+        learning_mistakes += 1
+        for i in xrange(VECTOR_SIZE):
+            cached_weight_vector[i] += y_hat * train_vector[i]
+            weight_vector[i] += count * y_hat * train_vector[i]
+        count = 1
+    else:
+        count += 1 
+        learning_successes += 1
+
+def test(train_vector, y_hat):
     global testing_successes, testing_mistakes
     prediction = dot_product(weight_vector, train_vector)
-#    print prediction, value
-    if (prediction * value) <= 0:
+#    print prediction, y_hat
+    if (prediction * y_hat) <= 0:
         testing_mistakes += 1
     else:
         testing_successes += 1
@@ -83,56 +101,87 @@ def convert_string_to_int_list(pixel_values):
         pixel_vector.append(int(x))
     return pixel_vector    
 
-#Train the classifier
-for x in xrange(TRAINING_ITERATIONS):
+def average_per_fold(fold_list):
+    #accepts a list of lists containing y_hats of different interations per fold, and returns a list of averages
+    average_array = []
+    for i in range(len(fold_list[0])):
+        sum_of_elements = 0
+        for j in range(len(fold_list)):
+            sum_of_elements += fold_list[j][i]
+        average_array.append(sum_of_elements / len(fold_list))
+    return average_array
+        
+
+for fold in range(len(training_files)):
+    weight_vector = [0] * VECTOR_SIZE
+    cached_weight_vector = [0] * VECTOR_SIZE
+    weight_vector_array = []
+    cached_weight_vector_array = []
+    learning_mistakes_array = []
+    learning_successes_array = []
+    training_mistakes_array = []
+    training_successes_array = []
+    testing_mistakes_array = []
+    testing_successes_array = []
+
+    for x in range(TRAINING_ITERATIONS):
+        learning_mistakes = 0
+        learning_successes = 0
         training_mistakes = 0
         training_successes = 0
         testing_mistakes = 0
         testing_successes = 0
-	for file_path in training_files:
-	    f = open(file_path, 'r')
 
-	    for line in f:
-		if len(line) > 4:
-		    line_split = line.strip().split('\t')
-		    pixel_values = line_split[1]
-		    pixel_vector = convert_string_to_int_list(pixel_values)
-                    value = -1
-                    if line_split[2] in vowels:
-                        value = 1
-		    perceptron_train(pixel_vector, value)
+        count = 1
+        
+        with open(training_files[fold], 'r') as f:
+            for line in f:
+                if len(line) > 4:
+                    pixel_vector, y_hat = parse_file_line(line)
+                    averaged_perceptron_train(pixel_vector, y_hat)
 
-	    f.close()
         weight_vector_array.append(weight_vector[:])
+        cached_weight_vector_array.append(cached_weight_vector[:])
+        learning_mistakes_array.append(learning_mistakes)
+        learning_successes_array.append(learning_successes)
+
+        #Calculate accuracy on training data
+        final_weight_vector = weight_vector_array[-1]
+        with open(training_files[fold], 'r') as f:
+            for line in f:
+                if len(line) > 4:
+                    pixel_vector, y_hat = parse_file_line(line)
+                    if dot_product(final_weight_vector, pixel_vector) < 0:
+                        training_mistakes += 1
+                    else:
+                        training_successes += 1
+
         training_mistakes_array.append(training_mistakes)
         training_successes_array.append(training_successes)
 
-	#Test the classifier
-	for test_file_path in test_files:
-	    f = open(test_file_path, 'r')
+        with open(test_files[fold], 'r') as f:
+            for line in f:
+                if len(line) > 4:
+                    pixel_vector, y_hat = parse_file_line(line)
+                    test(pixel_vector, y_hat)
 
-	    for line in f:
-		if len(line) > 4:
-		    line_split = line.strip().split('\t')
-		    pixel_values = line_split[1]
-		    pixel_vector = convert_string_to_int_list(pixel_values)
-		    value = -1
-		    if line_split[2] in vowels:
-			value = 1
-		    test(pixel_vector, value)
-
-	    f.close()
         testing_mistakes_array.append(testing_mistakes)
         testing_successes_array.append(testing_successes)
 
-print weight_vector_array
-print weight_vector
-print "wromg predictions= ", training_mistakes,"; Correct predictions= ",  training_successes
-print training_mistakes_array, training_successes_array
-print testing_mistakes_array, testing_successes_array
+    learning_mistakes_per_fold.append(learning_mistakes_array)
+    learning_successes_per_fold.append(learning_successes_array)
+    training_mistakes_per_fold.append(training_mistakes_array)
+    training_successes_per_fold.append(training_successes_array)
+    testing_mistakes_per_fold.append(testing_mistakes_array)
+    testing_successes_per_fold.append(testing_successes_array)
 
-plt.plot(training_mistakes_array)
-plt.plot(training_successes_array)
-plt.plot(testing_mistakes_array)
-plt.plot(testing_successes_array)
+
+print average_per_fold(learning_mistakes_per_fold)
+print average_per_fold(training_mistakes_per_fold)
+print average_per_fold(testing_mistakes_per_fold)
+plt.plot(average_per_fold(learning_mistakes_per_fold))
+plt.plot(average_per_fold(training_mistakes_per_fold))
+plt.plot(average_per_fold(testing_mistakes_per_fold))
+#plt.plot(average_per_fold(testing_mistakes_per_fold))
+#plt.plot(testing_successes_array)
 plt.show()
