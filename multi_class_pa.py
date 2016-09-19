@@ -51,7 +51,7 @@ def best_bad(x_t, weight_vector):
     class_label_list.remove(best)
     return max(class_label_list, key = lambda y: np.dot(weight_vector, f_x_y(x_t, y)))
 
-def perceptron_learn(weight_vector, x_t, y_t):
+def passive_agressive_learn(weight_vector, x_t, y_t):
     #Updates weight vector based on the training vector x_t
     global learning_mistakes, learning_successes
     y_hat = arg_max(x_t, weight_vector)

@@ -11,18 +11,18 @@ test_files = ["Data/ocr_fold0_sm_test.txt", "Data/ocr_fold1_sm_test.txt", "Data/
 VECTOR_SIZE = 128 
 vowels = ['a', 'e', 'i', 'o' ,'u']
 
-TRAINING_ITERATIONS = 1
+TRAINING_ITERATIONS = 50
 if len(sys.argv) > 1:
     TRAINING_ITERATIONS = int(sys.argv[1])
-
-count = 1
 
 learning_mistakes_per_fold = []
 learning_successes_per_fold = []
 training_mistakes_per_fold = []
 training_successes_per_fold = []
+training_accuracy_per_fold = []
 testing_mistakes_per_fold = []
 testing_successes_per_fold = []
+testing_accuracy_per_fold = []
 
 def parse_file_line(line):
     if len(line) < 4:
@@ -96,8 +96,10 @@ for fold in range(len(training_files)):
     learning_successes_array = []
     training_mistakes_array = []
     training_successes_array = []
+    training_accuracy_array = []
     testing_mistakes_array = []
     testing_successes_array = []
+    testing_accuracy_array = []
 
     for x in range(TRAINING_ITERATIONS):
         learning_mistakes = 0
@@ -107,8 +109,6 @@ for fold in range(len(training_files)):
         testing_mistakes = 0
         testing_successes = 0
 
-        count = 1
-        
         with open(training_files[fold], 'r') as f:
             for line in f:
                 if len(line) > 4:
@@ -116,7 +116,6 @@ for fold in range(len(training_files)):
                     perceptron_train(pixel_vector, y_hat)
 
         weight_vector_array.append(weight_vector[:])
-        cached_weight_vector_array.append(cached_weight_vector[:])
         learning_mistakes_array.append(learning_mistakes)
         learning_successes_array.append(learning_successes)
 
@@ -133,6 +132,7 @@ for fold in range(len(training_files)):
 
         training_mistakes_array.append(training_mistakes)
         training_successes_array.append(training_successes)
+        training_accuracy_array.append((training_successes * 100) / float(training_mistakes + training_successes))
 
         with open(test_files[fold], 'r') as f:
             for line in f:
@@ -142,21 +142,29 @@ for fold in range(len(training_files)):
 
         testing_mistakes_array.append(testing_mistakes)
         testing_successes_array.append(testing_successes)
+        testing_accuracy_array.append((testing_successes * 100) / float(testing_mistakes + testing_successes))
 
     learning_mistakes_per_fold.append(learning_mistakes_array)
     learning_successes_per_fold.append(learning_successes_array)
     training_mistakes_per_fold.append(training_mistakes_array)
     training_successes_per_fold.append(training_successes_array)
+    training_accuracy_per_fold.append(training_accuracy_array)
     testing_mistakes_per_fold.append(testing_mistakes_array)
     testing_successes_per_fold.append(testing_successes_array)
+    testing_accuracy_per_fold.append(testing_accuracy_array)
 
 
 print average_per_fold(learning_mistakes_per_fold)
-print average_per_fold(training_mistakes_per_fold)
-print average_per_fold(testing_mistakes_per_fold)
+print average_per_fold(training_accuracy_per_fold)
+print average_per_fold(testing_accuracy_per_fold)
 plt.plot(average_per_fold(learning_mistakes_per_fold))
-plt.plot(average_per_fold(training_mistakes_per_fold))
-plt.plot(average_per_fold(testing_mistakes_per_fold))
-#plt.plot(average_per_fold(testing_mistakes_per_fold))
-#plt.plot(testing_successes_array)
+plt.ylabel('Mistakes')
+plt.xlabel('Iterations')
+plt.title('Learning Curve')
+plt.show()
+plt.plot(average_per_fold(training_accuracy_per_fold), label='Training Accuracy')
+plt.plot(average_per_fold(testing_accuracy_per_fold), label='Testing Accuracy')
+plt.xlabel('Accuracy')
+plt.title('Accuracy Curve for Perceptron')
+plt.legend(loc = 1)
 plt.show()
