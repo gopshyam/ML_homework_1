@@ -54,7 +54,7 @@ def find_best_bad(x_t, weight_vector):
 def find_learning_rate(weight_vector, x_t, y_t, y_hat):
     numerator = 1 - (np.dot(weight_vector, f_x_y(x_t, y_t)) - np.dot(weight_vector, f_x_y(x_t, y_hat)))
     denominator = sum([ x * x for x in np.subtract(f_x_y(x_t, y_t), f_x_y(x_t, y_hat))])
-    return numerator / denominator
+    return float(numerator / denominator)
 
 def passive_aggressive_learn(weight_vector, x_t, y_t):
     #Updates weight vector based on the training vector x_t
